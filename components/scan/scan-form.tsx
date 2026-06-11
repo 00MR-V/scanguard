@@ -7,6 +7,8 @@ import {
   type SubmitScanResult,
 } from "@/actions/scan-actions";
 
+type ScannerMode = "CHOICE" | "CAMERA" | "MANUAL" | "RESULT";
+
 type DetectedBarcode = {
   rawValue: string;
 };
@@ -32,23 +34,26 @@ export function ScanForm() {
   const animationFrameRef = useRef<number | null>(null);
   const detectorRef = useRef<BarcodeDetectorInstance | null>(null);
   const isSubmittingRef = useRef(false);
-  const lastDetectedRef = useRef<{ value: string; time: number } | null>(null);
+  const [mode, setMode] = useState<ScannerMode>("CHOICE");
   const [result, setResult] = useState<SubmitScanResult | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
-  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isCameraStarting, setIsCameraStarting] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    inputRef.current?.focus();
+    if (mode === "MANUAL") {
+      inputRef.current?.focus();
+    }
 
     return () => {
-      stopCamera();
+      if (mode === "CAMERA") {
+        stopCamera();
+      }
     };
-  }, []);
+  }, [mode]);
 
   useEffect(() => {
-    if (!isCameraOpen || !videoRef.current || !streamRef.current) {
+    if (mode !== "CAMERA" || !videoRef.current || !streamRef.current) {
       return;
     }
 
@@ -65,20 +70,16 @@ export function ScanForm() {
       .catch(() => {
         setCameraError("Could not start the camera preview.");
         stopCamera();
+        setMode("CHOICE");
       });
-    // The detector loop is intentionally started only when the camera view opens.
+    // The detector loop starts only after the camera view mounts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCameraOpen]);
-
-  function focusInput() {
-    window.setTimeout(() => inputRef.current?.focus(), 0);
-  }
+  }, [mode]);
 
   function submitBarcode(barcodeValue: string) {
     const trimmedBarcode = barcodeValue.trim();
 
     if (!trimmedBarcode || isSubmittingRef.current) {
-      focusInput();
       return;
     }
 
@@ -92,34 +93,31 @@ export function ScanForm() {
 
         setResult(nextResult);
 
-        if (
-          nextResult.status === "SUCCESS" ||
-          nextResult.status === "DUPLICATE"
-        ) {
-          if (inputRef.current) {
-            inputRef.current.value = "";
-          }
+        if (inputRef.current) {
+          inputRef.current.value = "";
         }
+
+        setMode("RESULT");
       } finally {
         isSubmittingRef.current = false;
-        focusInput();
       }
     });
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleManualSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     submitBarcode(inputRef.current?.value ?? "");
   }
 
   async function openCamera() {
     setCameraError(null);
+    setResult(null);
     setIsCameraStarting(true);
 
     if (!window.BarcodeDetector) {
       setCameraError("Camera barcode scanning is not supported in this browser.");
       setIsCameraStarting(false);
-      focusInput();
+      setMode("CHOICE");
       return;
     }
 
@@ -138,7 +136,7 @@ export function ScanForm() {
           "qr_code",
         ],
       });
-      const stream = await navigator.mediaDevices.getUserMedia({
+      streamRef.current = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: "environment" },
           width: { ideal: 1280 },
@@ -146,20 +144,18 @@ export function ScanForm() {
         },
         audio: false,
       });
-
-      streamRef.current = stream;
-      setIsCameraOpen(true);
+      setMode("CAMERA");
     } catch {
       setCameraError("Camera access was blocked or unavailable.");
       stopCamera();
-      focusInput();
+      setMode("CHOICE");
     } finally {
       setIsCameraStarting(false);
     }
   }
 
   async function detectFromCamera(detector: BarcodeDetectorInstance) {
-    if (!videoRef.current || !streamRef.current) {
+    if (!videoRef.current || !streamRef.current || isSubmittingRef.current) {
       return;
     }
 
@@ -168,26 +164,9 @@ export function ScanForm() {
       const barcodeValue = barcodes[0]?.rawValue?.trim();
 
       if (barcodeValue) {
-        const now = Date.now();
-        const lastDetected = lastDetectedRef.current;
-
-        if (
-          lastDetected?.value === barcodeValue &&
-          now - lastDetected.time < 2500
-        ) {
-          animationFrameRef.current = window.requestAnimationFrame(() => {
-            void detectFromCamera(detector);
-          });
-          return;
-        }
-
-        lastDetectedRef.current = { value: barcodeValue, time: now };
-
-        if (inputRef.current) {
-          inputRef.current.value = barcodeValue;
-        }
-
+        stopCamera();
         submitBarcode(barcodeValue);
+        return;
       }
     } catch {
       setCameraError("Could not read a barcode from the camera.");
@@ -211,73 +190,69 @@ export function ScanForm() {
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
-
-    setIsCameraOpen(false);
   }
 
-  return (
-    <section className="grid flex-1 gap-5 lg:grid-cols-[3fr_1fr]">
-      <div className="flex min-h-[58vh] flex-col overflow-hidden rounded-lg border border-zinc-200 bg-zinc-950 shadow-sm">
-        <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-white">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-normal text-emerald-300">
-              Camera scanner
-            </p>
-            <p className="text-xs text-zinc-400">
-              {isCameraOpen ? "Scanning continuously" : "Camera closed"}
-            </p>
-          </div>
-          <button
-            className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
-            type="button"
-            disabled={isPending || isCameraStarting}
-            onClick={isCameraOpen ? stopCamera : openCamera}
-          >
-            {isCameraStarting
-              ? "Starting..."
-              : isCameraOpen
-                ? "Close Camera"
-                : "Open Camera"}
-          </button>
-        </div>
+  function startManualEntry() {
+    stopCamera();
+    setCameraError(null);
+    setResult(null);
+    setMode("MANUAL");
+  }
 
-        <div className="relative flex flex-1 items-center justify-center bg-black">
-          {isCameraOpen ? (
+  function resetToChoice() {
+    stopCamera();
+    setCameraError(null);
+    setResult(null);
+    setMode("CHOICE");
+  }
+
+  if (mode === "CAMERA") {
+    return (
+      <section className="flex flex-1 flex-col gap-5">
+        <div className="flex min-h-[70vh] flex-col overflow-hidden rounded-lg border border-zinc-200 bg-zinc-950 shadow-sm">
+          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-white">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-normal text-emerald-300">
+                Scan student ID
+              </p>
+              <p className="text-xs text-zinc-400">Camera active</p>
+            </div>
+            <button
+              className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-zinc-200"
+              type="button"
+              onClick={resetToChoice}
+            >
+              Cancel
+            </button>
+          </div>
+          <div className="relative flex flex-1 items-center justify-center bg-black">
             <video
               ref={videoRef}
-              className="h-full min-h-[52vh] w-full object-cover"
+              className="h-full min-h-[64vh] w-full object-cover"
               muted
               playsInline
             />
-          ) : (
-            <div className="px-6 text-center text-white">
-              <p className="text-4xl font-bold">CAMERA READY</p>
-            </div>
-          )}
-          {isCameraOpen ? (
-            <div className="pointer-events-none absolute inset-x-[12%] top-1/2 h-24 -translate-y-1/2 rounded-lg border-2 border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]" />
-          ) : null}
-        </div>
-
-        {cameraError ? (
-          <div className="border-t border-yellow-400/30 bg-yellow-100 px-4 py-3 text-sm text-yellow-950">
-            {cameraError}
+            <div className="pointer-events-none absolute inset-x-[10%] top-1/2 h-28 -translate-y-1/2 rounded-lg border-2 border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]" />
           </div>
-        ) : null}
-      </div>
+        </div>
+      </section>
+    );
+  }
 
-      <div className="flex flex-col gap-5">
+  if (mode === "MANUAL") {
+    return (
+      <section className="flex flex-1 items-start justify-center">
         <form
-          className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm"
-          onSubmit={handleSubmit}
+          className="w-full max-w-xl rounded-lg border border-zinc-200 bg-white p-5 shadow-sm"
+          onSubmit={handleManualSubmit}
         >
           <label className="block">
             <span className="text-sm font-semibold uppercase tracking-normal text-zinc-600">
-              Barcode
+              Student ID
             </span>
             <input
               ref={inputRef}
-              className="mt-2 h-14 w-full rounded-md border-2 border-zinc-300 px-3 text-2xl font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 h-16 w-full rounded-md border-2 border-zinc-300 px-4 text-3xl font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100"
               name="barcodeValue"
               type="text"
               autoComplete="off"
@@ -288,26 +263,81 @@ export function ScanForm() {
             />
           </label>
 
-          <button
-            className="mt-4 h-12 w-full rounded-md bg-zinc-950 px-4 text-base font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
-            type="submit"
-            disabled={isPending}
-          >
-            {isPending ? "Saving..." : "Submit"}
-          </button>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <button
+              className="h-12 rounded-md bg-zinc-950 px-4 text-base font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+              type="submit"
+              disabled={isPending}
+            >
+              {isPending ? "Saving..." : "Submit ID"}
+            </button>
+            <button
+              className="h-12 rounded-md border border-zinc-300 px-4 text-base font-semibold text-zinc-900 transition hover:bg-zinc-100"
+              type="button"
+              onClick={resetToChoice}
+            >
+              Back
+            </button>
+          </div>
         </form>
+      </section>
+    );
+  }
 
-        {result ? <ScanResult result={result} /> : <ReadyState />}
-      </div>
-    </section>
-  );
-}
+  if (mode === "RESULT" && result) {
+    return (
+      <section className="flex flex-1 flex-col gap-5">
+        <ScanResult result={result} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <button
+            className="h-14 rounded-md bg-emerald-700 px-4 text-lg font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+            type="button"
+            disabled={isPending || isCameraStarting}
+            onClick={openCamera}
+          >
+            {isCameraStarting ? "Starting..." : "Scan Again"}
+          </button>
+          <button
+            className="h-14 rounded-md border border-zinc-300 bg-white px-4 text-lg font-semibold text-zinc-900 transition hover:bg-zinc-100"
+            type="button"
+            onClick={startManualEntry}
+          >
+            Manual Entry
+          </button>
+        </div>
+      </section>
+    );
+  }
 
-function ReadyState() {
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-      <div>
-        <p className="text-3xl font-bold">READY</p>
+    <section className="flex flex-1 items-start justify-center">
+      <div className="grid w-full max-w-3xl gap-4 sm:grid-cols-2">
+        <button
+          className="min-h-52 rounded-lg border border-emerald-200 bg-emerald-700 p-6 text-left text-white shadow-sm transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-400"
+          type="button"
+          disabled={isPending || isCameraStarting}
+          onClick={openCamera}
+        >
+          <p className="text-3xl font-black">Scan Student ID</p>
+          <p className="mt-3 text-sm text-emerald-50">
+            {isCameraStarting ? "Starting camera..." : "Open camera scanner"}
+          </p>
+        </button>
+
+        <button
+          className="min-h-52 rounded-lg border border-zinc-200 bg-white p-6 text-left text-zinc-950 shadow-sm transition hover:bg-zinc-50"
+          type="button"
+          onClick={startManualEntry}
+        >
+          <p className="text-3xl font-black">Manual Entry</p>
+          <p className="mt-3 text-sm text-zinc-500">Type the ID number</p>
+        </button>
+
+        {cameraError ? (
+          <div className="rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-950 sm:col-span-2">
+            {cameraError}
+          </div>
+        ) : null}
       </div>
     </section>
   );
@@ -316,11 +346,11 @@ function ReadyState() {
 function ScanResult({ result }: { result: SubmitScanResult }) {
   if (result.status === "SUCCESS") {
     return (
-      <section className="rounded-lg border border-emerald-300 bg-emerald-100 p-5 text-emerald-950 shadow-sm">
+      <section className="rounded-lg border border-emerald-300 bg-emerald-100 p-6 text-emerald-950 shadow-sm">
         <div className="w-full">
-          <p className="text-4xl font-black">VALID SCAN</p>
-          <dl className="mt-5 space-y-3 text-lg">
-            <ResultRow label="Barcode" value={result.barcodeValue} />
+          <p className="text-5xl font-black">VERIFICATION SUCCESSFUL</p>
+          <dl className="mt-6 space-y-4 text-xl">
+            <ResultRow label="Student ID" value={result.barcodeValue} />
             <ResultRow label="Time" value={formatDateTime(result.scannedAt)} />
           </dl>
         </div>
@@ -330,11 +360,11 @@ function ScanResult({ result }: { result: SubmitScanResult }) {
 
   if (result.status === "DUPLICATE") {
     return (
-      <section className="rounded-lg border border-red-300 bg-red-100 p-5 text-red-950 shadow-sm">
+      <section className="rounded-lg border border-red-300 bg-red-100 p-6 text-red-950 shadow-sm">
         <div className="w-full">
-          <p className="text-4xl font-black">DUPLICATE</p>
-          <dl className="mt-5 space-y-3 text-lg">
-            <ResultRow label="Barcode" value={result.barcodeValue} />
+          <p className="text-5xl font-black">DUPLICATE</p>
+          <dl className="mt-6 space-y-4 text-xl">
+            <ResultRow label="Student ID" value={result.barcodeValue} />
             <ResultRow label="First scanned by" value={result.originalScannedBy} />
             <ResultRow
               label="First scanned at"
@@ -352,16 +382,16 @@ function ScanResult({ result }: { result: SubmitScanResult }) {
 
   const title =
     result.status === "INVALID_FORMAT"
-      ? "INVALID BARCODE"
+      ? "INVALID ID"
       : result.status === "EVENT_CLOSED"
         ? "NO ACTIVE EVENT"
         : "SYSTEM ERROR";
 
   return (
-    <section className="rounded-lg border border-yellow-300 bg-yellow-100 p-5 text-yellow-950 shadow-sm">
+    <section className="rounded-lg border border-yellow-300 bg-yellow-100 p-6 text-yellow-950 shadow-sm">
       <div>
-        <p className="text-4xl font-black">{title}</p>
-        <p className="mt-4 text-lg">{result.message}</p>
+        <p className="text-5xl font-black">{title}</p>
+        <p className="mt-4 text-xl">{result.message}</p>
       </div>
     </section>
   );
