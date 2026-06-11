@@ -60,6 +60,37 @@ export interface ScanStats {
   totalDuplicateAttempts: number;
 }
 
+export interface SearchScansInput {
+  barcodeValue?: string;
+  scannerUsername?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface SearchDuplicateAttemptsInput {
+  barcodeValue?: string;
+  scannerUsername?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface SearchScanResult extends OriginalScan {
+  eventName: string;
+}
+
+export interface SearchDuplicateAttemptResult extends DuplicateAttempt {
+  eventName: string;
+  originalScannedByUsername: string | null;
+  originalScannedByFullName: string | null;
+  originalScannedAt: Date | null;
+  attemptedByUsername: string;
+  attemptedByFullName: string | null;
+}
+
 type ScanRow = {
   id: string;
   event_id: string;
@@ -94,6 +125,12 @@ type RecentDuplicateRow = DuplicateAttemptRow & {
   event_name: string;
   attempted_by_username: string;
   attempted_by_full_name: string | null;
+};
+
+type SearchDuplicateAttemptRow = RecentDuplicateRow & {
+  original_scanned_by_username: string | null;
+  original_scanned_by_full_name: string | null;
+  original_scanned_at: Date | null;
 };
 
 type ScanStatsRow = {
@@ -263,6 +300,85 @@ export async function getScanStats(eventId: string): Promise<ScanStats> {
   };
 }
 
+export async function searchScans(
+  input: SearchScansInput,
+): Promise<SearchScanResult[]> {
+  const barcodeValue = normalizeSearchValue(input.barcodeValue);
+  const scannerUsername = normalizeSearchValue(input.scannerUsername);
+  const dateFrom = normalizeDateValue(input.dateFrom);
+  const dateTo = normalizeDateValue(input.dateTo);
+  const limit = normalizeLimit(input.limit ?? 50, 200);
+  const offset = normalizeOffset(input.offset);
+  const rows = (await getSql()`
+    SELECT
+      scans.id,
+      scans.event_id,
+      scans.barcode_value,
+      scans.scanned_by_user_id,
+      scans.scanned_at,
+      scans.device_id,
+      scans.location,
+      users.username AS scanned_by_username,
+      users.full_name AS scanned_by_full_name,
+      events.name AS event_name
+    FROM scans
+    INNER JOIN users ON users.id = scans.scanned_by_user_id
+    INNER JOIN events ON events.id = scans.event_id
+    WHERE (${barcodeValue}::text IS NULL OR scans.barcode_value ILIKE '%' || ${barcodeValue} || '%')
+      AND (${scannerUsername}::text IS NULL OR users.username ILIKE '%' || ${scannerUsername} || '%')
+      AND (${dateFrom}::timestamptz IS NULL OR scans.scanned_at >= ${dateFrom}::timestamptz)
+      AND (${dateTo}::timestamptz IS NULL OR scans.scanned_at <= ${dateTo}::timestamptz)
+    ORDER BY scans.scanned_at DESC
+    LIMIT ${limit}
+    OFFSET ${offset}
+  `) as RecentScanRow[];
+
+  return rows.map(mapRecentScan);
+}
+
+export async function searchDuplicateAttempts(
+  input: SearchDuplicateAttemptsInput,
+): Promise<SearchDuplicateAttemptResult[]> {
+  const barcodeValue = normalizeSearchValue(input.barcodeValue);
+  const scannerUsername = normalizeSearchValue(input.scannerUsername);
+  const dateFrom = normalizeDateValue(input.dateFrom);
+  const dateTo = normalizeDateValue(input.dateTo);
+  const limit = normalizeLimit(input.limit ?? 50, 200);
+  const offset = normalizeOffset(input.offset);
+  const rows = (await getSql()`
+    SELECT
+      duplicate_scan_attempts.id,
+      duplicate_scan_attempts.event_id,
+      duplicate_scan_attempts.barcode_value,
+      duplicate_scan_attempts.attempted_by_user_id,
+      duplicate_scan_attempts.attempted_at,
+      duplicate_scan_attempts.original_scan_id,
+      duplicate_scan_attempts.device_id,
+      duplicate_scan_attempts.location,
+      events.name AS event_name,
+      attempted_users.username AS attempted_by_username,
+      attempted_users.full_name AS attempted_by_full_name,
+      original_users.username AS original_scanned_by_username,
+      original_users.full_name AS original_scanned_by_full_name,
+      scans.scanned_at AS original_scanned_at
+    FROM duplicate_scan_attempts
+    INNER JOIN users AS attempted_users
+      ON attempted_users.id = duplicate_scan_attempts.attempted_by_user_id
+    INNER JOIN events ON events.id = duplicate_scan_attempts.event_id
+    LEFT JOIN scans ON scans.id = duplicate_scan_attempts.original_scan_id
+    LEFT JOIN users AS original_users ON original_users.id = scans.scanned_by_user_id
+    WHERE (${barcodeValue}::text IS NULL OR duplicate_scan_attempts.barcode_value ILIKE '%' || ${barcodeValue} || '%')
+      AND (${scannerUsername}::text IS NULL OR attempted_users.username ILIKE '%' || ${scannerUsername} || '%')
+      AND (${dateFrom}::timestamptz IS NULL OR duplicate_scan_attempts.attempted_at >= ${dateFrom}::timestamptz)
+      AND (${dateTo}::timestamptz IS NULL OR duplicate_scan_attempts.attempted_at <= ${dateTo}::timestamptz)
+    ORDER BY duplicate_scan_attempts.attempted_at DESC
+    LIMIT ${limit}
+    OFFSET ${offset}
+  `) as SearchDuplicateAttemptRow[];
+
+  return rows.map(mapSearchDuplicateAttempt);
+}
+
 export function isUniqueViolation(error: unknown): boolean {
   return (
     typeof error === "object" &&
@@ -335,10 +451,41 @@ function mapRecentDuplicate(row: RecentDuplicateRow): RecentDuplicate {
   };
 }
 
-function normalizeLimit(limit: number): number {
+function mapSearchDuplicateAttempt(
+  row: SearchDuplicateAttemptRow,
+): SearchDuplicateAttemptResult {
+  return {
+    ...mapRecentDuplicate(row),
+    originalScannedByUsername: row.original_scanned_by_username,
+    originalScannedByFullName: row.original_scanned_by_full_name,
+    originalScannedAt: row.original_scanned_at,
+  };
+}
+
+function normalizeLimit(limit: number, maxLimit = 100): number {
   if (!Number.isFinite(limit)) {
     return 50;
   }
 
-  return Math.min(Math.max(Math.trunc(limit), 1), 100);
+  return Math.min(Math.max(Math.trunc(limit), 1), maxLimit);
+}
+
+function normalizeOffset(offset?: number): number {
+  if (!offset || !Number.isFinite(offset)) {
+    return 0;
+  }
+
+  return Math.max(Math.trunc(offset), 0);
+}
+
+function normalizeSearchValue(value?: string): string | null {
+  const trimmed = value?.trim();
+
+  return trimmed ? trimmed : null;
+}
+
+function normalizeDateValue(value?: string): string | null {
+  const trimmed = value?.trim();
+
+  return trimmed ? trimmed : null;
 }
