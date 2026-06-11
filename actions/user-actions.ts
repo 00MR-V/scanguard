@@ -1,0 +1,169 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+import { requireRole } from "@/lib/auth";
+import {
+  createUser,
+  findUserById,
+  updateUserActiveStatus,
+  updateUserPassword,
+  type UserRole,
+} from "@/lib/repositories/users";
+import {
+  generateEasyPassword,
+  generateUsername,
+  hashPassword,
+} from "@/lib/passwords";
+
+export type CreateUserState = {
+  status: "IDLE" | "SUCCESS" | "ERROR";
+  message?: string;
+  generatedPassword?: string;
+};
+
+export type UserActionState = {
+  status: "IDLE" | "SUCCESS" | "ERROR";
+  message?: string;
+  generatedPassword?: string;
+};
+
+const USER_ROLES: UserRole[] = ["SUPER_ADMIN", "ADMIN", "SCANNER"];
+
+export async function createUserAction(
+  _previousState: CreateUserState,
+  formData: FormData,
+): Promise<CreateUserState> {
+  await requireRole(["SUPER_ADMIN"]);
+
+  const fullName = getOptionalString(formData, "fullName");
+  const username = getRequiredString(formData, "username").toLowerCase();
+  const password = getRequiredString(formData, "password");
+  const role = getUserRole(formData);
+
+  if (!username || !password || !role) {
+    return {
+      status: "ERROR",
+      message: "Username, password, and role are required.",
+    };
+  }
+
+  try {
+    await createUser({
+      username,
+      passwordHash: await hashPassword(password),
+      fullName,
+      role,
+    });
+
+    revalidatePath("/admin/users");
+
+    return {
+      status: "SUCCESS",
+      message: `Created user "${username}".`,
+      generatedPassword: password,
+    };
+  } catch (error) {
+    return {
+      status: "ERROR",
+      message:
+        error instanceof Error ? error.message : "Could not create user.",
+    };
+  }
+}
+
+export async function updateUserActiveStatusAction(
+  _previousState: UserActionState,
+  formData: FormData,
+): Promise<UserActionState> {
+  await requireRole(["SUPER_ADMIN"]);
+
+  const userId = getRequiredString(formData, "userId");
+  const isActive = getRequiredString(formData, "isActive") === "true";
+
+  if (!userId) {
+    return {
+      status: "ERROR",
+      message: "User ID is required.",
+    };
+  }
+
+  const updatedUser = await updateUserActiveStatus(userId, isActive);
+
+  if (!updatedUser) {
+    return {
+      status: "ERROR",
+      message: "User was not found.",
+    };
+  }
+
+  revalidatePath("/admin/users");
+
+  return {
+    status: "SUCCESS",
+    message: `${updatedUser.username} is now ${
+      updatedUser.isActive ? "active" : "inactive"
+    }.`,
+  };
+}
+
+export async function resetUserPasswordAction(
+  _previousState: UserActionState,
+  formData: FormData,
+): Promise<UserActionState> {
+  await requireRole(["SUPER_ADMIN"]);
+
+  const userId = getRequiredString(formData, "userId");
+
+  if (!userId) {
+    return {
+      status: "ERROR",
+      message: "User ID is required.",
+    };
+  }
+
+  const user = await findUserById(userId);
+
+  if (!user) {
+    return {
+      status: "ERROR",
+      message: "User was not found.",
+    };
+  }
+
+  const password = generateEasyPassword();
+  await updateUserPassword(user.id, await hashPassword(password));
+  revalidatePath("/admin/users");
+
+  return {
+    status: "SUCCESS",
+    message: `Password reset for ${user.username}.`,
+    generatedPassword: password,
+  };
+}
+
+export async function generateUsernameAction(name?: string): Promise<string> {
+  await requireRole(["SUPER_ADMIN"]);
+
+  return generateUsername(name);
+}
+
+export async function generateEasyPasswordAction(): Promise<string> {
+  await requireRole(["SUPER_ADMIN"]);
+
+  return generateEasyPassword();
+}
+
+function getRequiredString(formData: FormData, key: string): string {
+  return String(formData.get(key) ?? "").trim();
+}
+
+function getOptionalString(formData: FormData, key: string): string | undefined {
+  return getRequiredString(formData, key) || undefined;
+}
+
+function getUserRole(formData: FormData): UserRole | null {
+  const role = getRequiredString(formData, "role") as UserRole;
+
+  return USER_ROLES.includes(role) ? role : null;
+}
