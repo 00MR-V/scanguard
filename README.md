@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ScanGuard
 
-## Getting Started
+ScanGuard is a Next.js application for event-based barcode scanning, duplicate detection, scanner user management, reporting, and audit logging.
 
-First, run the development server:
+## Local Setup
+
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Copy `.env.example` to `.env.local` and set real values:
+
+```bash
+DATABASE_URL="postgresql://..."
+SESSION_SECRET="long-random-secret"
+APP_NAME="ScanGuard"
+```
+
+3. Run the database schema in Neon:
+
+```bash
+database/schema.sql
+```
+
+4. Seed the default event if needed:
+
+```bash
+database/seed.sql
+```
+
+5. Create the first super admin:
+
+```bash
+npm run create-super-admin
+```
+
+6. Start development:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deployment Checklist
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Set `DATABASE_URL` in the hosting environment.
+- Set `SESSION_SECRET` to a long random value.
+- Run `database/schema.sql` in Neon.
+- Create the first super admin with `npm run create-super-admin`.
+- Remove test pages before production deployment.
+- Enable HTTPS.
+- Rotate the database password if it was exposed.
+- Deploy to Vercel or a preferred host.
+- Run `npm run build` and fix any build errors.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Useful Commands
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+```
