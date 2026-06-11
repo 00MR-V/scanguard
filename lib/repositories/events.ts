@@ -2,6 +2,8 @@ import "server-only";
 
 import { neon } from "@neondatabase/serverless";
 
+import { createAuditLog } from "@/lib/repositories/audit-logs";
+
 export type EventStatus = "DRAFT" | "ACTIVE" | "CLOSED";
 
 export interface CreateEventInput {
@@ -42,7 +44,18 @@ export async function createEvent(input: CreateEventInput): Promise<Event> {
       updated_at
   `) as EventRow[];
 
-  return mapEvent(rows[0]);
+  const event = mapEvent(rows[0]);
+
+  await createAuditLog({
+    action: "EVENT_CREATED",
+    details: {
+      eventId: event.id,
+      name: event.name,
+      status: event.status,
+    },
+  });
+
+  return event;
 }
 
 export async function listEvents(): Promise<Event[]> {
@@ -75,7 +88,20 @@ export async function findEventById(eventId: string): Promise<Event | null> {
     LIMIT 1
   `) as EventRow[];
 
-  return rows[0] ? mapEvent(rows[0]) : null;
+  const event = rows[0] ? mapEvent(rows[0]) : null;
+
+  if (event) {
+    await createAuditLog({
+      action: "EVENT_STATUS_CHANGED",
+      details: {
+        eventId: event.id,
+        name: event.name,
+        status: event.status,
+      },
+    });
+  }
+
+  return event;
 }
 
 export async function getActiveEvent(): Promise<Event | null> {

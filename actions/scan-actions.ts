@@ -10,6 +10,7 @@ import {
   findOriginalScan,
   isUniqueViolation,
 } from "@/lib/repositories/scans";
+import { createAuditLog } from "@/lib/repositories/audit-logs";
 import { getSessionUserId } from "@/lib/session";
 
 export type SubmitScanResult =
@@ -81,6 +82,17 @@ export async function submitScanAction(
       deviceId,
       location,
     });
+    await createAuditLog({
+      userId: user.id,
+      action: "SCAN_SUCCESS",
+      details: {
+        eventId: activeEvent.id,
+        barcodeValue,
+        scanId: scan.id,
+        deviceId,
+        location,
+      },
+    });
 
     return {
       status: "SUCCESS",
@@ -103,6 +115,18 @@ export async function submitScanAction(
       originalScanId: originalScan?.id,
       deviceId,
       location,
+    });
+    await createAuditLog({
+      userId: user.id,
+      action: "SCAN_DUPLICATE",
+      details: {
+        eventId: activeEvent.id,
+        barcodeValue,
+        originalScanId: originalScan?.id,
+        duplicateAttemptId: duplicateAttempt.id,
+        deviceId,
+        location,
+      },
     });
 
     return {

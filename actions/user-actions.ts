@@ -15,6 +15,7 @@ import {
   generateUsername,
   hashPassword,
 } from "@/lib/passwords";
+import { createAuditLog } from "@/lib/repositories/audit-logs";
 
 export type CreateUserState = {
   status: "IDLE" | "SUCCESS" | "ERROR";
@@ -34,7 +35,7 @@ export async function createUserAction(
   _previousState: CreateUserState,
   formData: FormData,
 ): Promise<CreateUserState> {
-  await requireRole(["SUPER_ADMIN"]);
+  const actor = await requireRole(["SUPER_ADMIN"]);
 
   const fullName = getOptionalString(formData, "fullName");
   const username = getRequiredString(formData, "username").toLowerCase();
@@ -49,11 +50,20 @@ export async function createUserAction(
   }
 
   try {
-    await createUser({
+    const createdUser = await createUser({
       username,
       passwordHash: await hashPassword(password),
       fullName,
       role,
+    });
+    await createAuditLog({
+      userId: actor.id,
+      action: "USER_CREATED",
+      details: {
+        userId: createdUser.id,
+        username: createdUser.username,
+        role: createdUser.role,
+      },
     });
 
     revalidatePath("/admin/users");
@@ -76,7 +86,7 @@ export async function updateUserActiveStatusAction(
   _previousState: UserActionState,
   formData: FormData,
 ): Promise<UserActionState> {
-  await requireRole(["SUPER_ADMIN"]);
+  const actor = await requireRole(["SUPER_ADMIN"]);
 
   const userId = getRequiredString(formData, "userId");
   const isActive = getRequiredString(formData, "isActive") === "true";
@@ -98,6 +108,15 @@ export async function updateUserActiveStatusAction(
   }
 
   revalidatePath("/admin/users");
+  await createAuditLog({
+    userId: actor.id,
+    action: updatedUser.isActive ? "USER_ENABLED" : "USER_DISABLED",
+    details: {
+      userId: updatedUser.id,
+      username: updatedUser.username,
+      role: updatedUser.role,
+    },
+  });
 
   return {
     status: "SUCCESS",
@@ -111,7 +130,7 @@ export async function resetUserPasswordAction(
   _previousState: UserActionState,
   formData: FormData,
 ): Promise<UserActionState> {
-  await requireRole(["SUPER_ADMIN"]);
+  const actor = await requireRole(["SUPER_ADMIN"]);
 
   const userId = getRequiredString(formData, "userId");
 
@@ -134,6 +153,15 @@ export async function resetUserPasswordAction(
   const password = generateEasyPassword();
   await updateUserPassword(user.id, await hashPassword(password));
   revalidatePath("/admin/users");
+  await createAuditLog({
+    userId: actor.id,
+    action: "PASSWORD_RESET",
+    details: {
+      userId: user.id,
+      username: user.username,
+      role: user.role,
+    },
+  });
 
   return {
     status: "SUCCESS",

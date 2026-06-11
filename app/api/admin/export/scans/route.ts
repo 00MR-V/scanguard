@@ -2,6 +2,7 @@ import { neon } from "@neondatabase/serverless";
 import { NextResponse } from "next/server";
 
 import { getCurrentUser } from "@/lib/auth";
+import { createAuditLog } from "@/lib/repositories/audit-logs";
 
 type ScanExportRow = {
   barcode_value: string;
@@ -22,10 +23,10 @@ const CSV_HEADERS = [
 ];
 
 export async function GET() {
-  const authResponse = await requireAdminExportAccess();
+  const { user, response } = await requireAdminExportAccess();
 
-  if (authResponse) {
-    return authResponse;
+  if (response) {
+    return response;
   }
 
   const databaseUrl = process.env.DATABASE_URL;
@@ -47,6 +48,11 @@ export async function GET() {
     INNER JOIN users ON users.id = scans.scanned_by_user_id
     ORDER BY scans.scanned_at DESC
   `) as ScanExportRow[];
+  await createAuditLog({
+    userId: user.id,
+    action: "EXPORT_SCANS",
+    details: { rowCount: rows.length },
+  });
 
   return createCsvResponse(
     CSV_HEADERS,
@@ -62,18 +68,27 @@ export async function GET() {
   );
 }
 
-async function requireAdminExportAccess(): Promise<NextResponse | null> {
+async function requireAdminExportAccess(): Promise<
+  | { user: NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>; response: null }
+  | { user: null; response: NextResponse }
+> {
   const user = await getCurrentUser();
 
   if (!user) {
-    return new NextResponse("Unauthorized", { status: 401 });
+    return {
+      user: null,
+      response: new NextResponse("Unauthorized", { status: 401 }),
+    };
   }
 
   if (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN") {
-    return new NextResponse("Forbidden", { status: 403 });
+    return {
+      user: null,
+      response: new NextResponse("Forbidden", { status: 403 }),
+    };
   }
 
-  return null;
+  return { user, response: null };
 }
 
 function createCsvResponse(

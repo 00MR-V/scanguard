@@ -9,6 +9,7 @@ import {
   updateLastLoginAt,
   type UserRole,
 } from "@/lib/repositories/users";
+import { createAuditLog } from "@/lib/repositories/audit-logs";
 
 type LoginErrorCode = "missing_fields" | "invalid_credentials" | "disabled";
 
@@ -19,26 +20,49 @@ export async function loginAction(formData: FormData): Promise<void> {
   const password = String(formData.get("password") ?? "");
 
   if (!username || !password) {
+    await createAuditLog({
+      action: "LOGIN_FAILED",
+      details: { username, reason: "missing_fields" },
+    });
     redirectWithLoginError("missing_fields");
   }
 
   const user = await findUserByUsername(username);
 
   if (!user) {
+    await createAuditLog({
+      action: "LOGIN_FAILED",
+      details: { username, reason: "user_not_found" },
+    });
     redirectWithLoginError("invalid_credentials");
   }
 
   if (!user.isActive) {
+    await createAuditLog({
+      userId: user.id,
+      action: "LOGIN_FAILED",
+      details: { username, reason: "disabled" },
+    });
     redirectWithLoginError("disabled");
   }
 
   const isValidPassword = await verifyPassword(password, user.passwordHash);
 
   if (!isValidPassword) {
+    await createAuditLog({
+      userId: user.id,
+      action: "LOGIN_FAILED",
+      details: { username, reason: "invalid_password" },
+    });
     redirectWithLoginError("invalid_credentials");
   }
 
   await updateLastLoginAt(user.id);
+  await createAuditLog({
+    userId: user.id,
+    action: "LOGIN_SUCCESS",
+    details: { username, role: user.role },
+  });
   await createSession(user.id);
 
   redirect(getPostLoginPath(user.role));
