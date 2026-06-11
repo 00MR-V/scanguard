@@ -1,3 +1,6 @@
+import Link from "next/link";
+
+import { LogoutButton } from "@/components/auth/logout-button";
 import { requireRole } from "@/lib/auth";
 import { getActiveEvent } from "@/lib/repositories/events";
 import { ScanForm } from "@/components/scan/scan-form";
@@ -24,6 +27,25 @@ export default async function ScanPage() {
               <p className="text-sm text-zinc-500">Signed in as</p>
               <p className="text-lg font-semibold">{displayName}</p>
             </div>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {user.role === "SUPER_ADMIN" || user.role === "ADMIN" ? (
+              <>
+                <Link
+                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
+                  href="/admin/dashboard"
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
+                  href="/admin/users"
+                >
+                  Users
+                </Link>
+              </>
+            ) : null}
+            <LogoutButton />
           </div>
         </header>
 

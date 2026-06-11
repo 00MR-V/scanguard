@@ -7,24 +7,54 @@ import {
   type SubmitScanResult,
 } from "@/actions/scan-actions";
 
+type DetectedBarcode = {
+  rawValue: string;
+};
+
+type BarcodeDetectorInstance = {
+  detect(source: HTMLVideoElement): Promise<DetectedBarcode[]>;
+};
+
+type BarcodeDetectorConstructor = new (options?: {
+  formats?: string[];
+}) => BarcodeDetectorInstance;
+
+declare global {
+  interface Window {
+    BarcodeDetector?: BarcodeDetectorConstructor;
+  }
+}
+
 export function ScanForm() {
   const inputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
   const [result, setResult] = useState<SubmitScanResult | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     inputRef.current?.focus();
+
+    return () => {
+      stopCamera();
+    };
   }, []);
 
   function focusInput() {
     window.setTimeout(() => inputRef.current?.focus(), 0);
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function submitBarcode(barcodeValue: string) {
+    if (!barcodeValue.trim() || isPending) {
+      focusInput();
+      return;
+    }
 
-    const form = event.currentTarget;
-    const formData = new FormData(form);
+    const formData = new FormData();
+    formData.set("barcodeValue", barcodeValue);
 
     startTransition(async () => {
       const nextResult = await submitScanAction(formData);
@@ -35,11 +65,92 @@ export function ScanForm() {
         nextResult.status === "SUCCESS" ||
         nextResult.status === "DUPLICATE"
       ) {
-        form.reset();
+        if (inputRef.current) {
+          inputRef.current.value = "";
+        }
       }
 
       focusInput();
     });
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    submitBarcode(inputRef.current?.value ?? "");
+  }
+
+  async function openCamera() {
+    setCameraError(null);
+
+    if (!window.BarcodeDetector) {
+      setCameraError("Camera barcode scanning is not supported in this browser.");
+      focusInput();
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+      setIsCameraOpen(true);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      detectFromCamera(new window.BarcodeDetector());
+    } catch {
+      setCameraError("Camera access was blocked or unavailable.");
+      stopCamera();
+      focusInput();
+    }
+  }
+
+  async function detectFromCamera(detector: BarcodeDetectorInstance) {
+    if (!videoRef.current || !streamRef.current) {
+      return;
+    }
+
+    try {
+      const barcodes = await detector.detect(videoRef.current);
+      const barcodeValue = barcodes[0]?.rawValue?.trim();
+
+      if (barcodeValue) {
+        if (inputRef.current) {
+          inputRef.current.value = barcodeValue;
+        }
+
+        stopCamera();
+        submitBarcode(barcodeValue);
+        return;
+      }
+    } catch {
+      setCameraError("Could not read a barcode from the camera.");
+    }
+
+    animationFrameRef.current = window.requestAnimationFrame(() => {
+      void detectFromCamera(detector);
+    });
+  }
+
+  function stopCamera() {
+    if (animationFrameRef.current !== null) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setIsCameraOpen(false);
   }
 
   return (
@@ -72,6 +183,32 @@ export function ScanForm() {
         >
           {isPending ? "Scanning..." : "Submit Scan"}
         </button>
+
+        <button
+          className="mt-3 h-14 w-full rounded-md border border-zinc-300 bg-white px-4 text-lg font-semibold text-zinc-900 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400"
+          type="button"
+          disabled={isPending}
+          onClick={isCameraOpen ? stopCamera : openCamera}
+        >
+          {isCameraOpen ? "Close Camera" : "Open Camera Scanner"}
+        </button>
+
+        {cameraError ? (
+          <div className="mt-3 rounded-md border border-yellow-300 bg-yellow-50 px-3 py-2 text-sm text-yellow-950">
+            {cameraError}
+          </div>
+        ) : null}
+
+        {isCameraOpen ? (
+          <div className="mt-4 overflow-hidden rounded-lg border border-zinc-300 bg-black">
+            <video
+              ref={videoRef}
+              className="aspect-video w-full object-cover"
+              muted
+              playsInline
+            />
+          </div>
+        ) : null}
       </form>
 
       {result ? <ScanResult result={result} /> : <ReadyState />}
