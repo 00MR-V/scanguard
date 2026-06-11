@@ -211,9 +211,9 @@ export function ScanForm() {
 
   if (mode === "CAMERA") {
     return (
-      <section className="flex flex-1 flex-col">
-        <div className="flex h-[calc(100svh-13rem)] min-h-[390px] max-h-[620px] flex-col overflow-hidden rounded-lg border border-zinc-200 bg-zinc-950 shadow-sm sm:h-[calc(100svh-15rem)] lg:min-h-[620px]">
-          <div className="flex items-center justify-between border-b border-white/10 px-3 py-2 text-white sm:px-4 sm:py-3">
+      <section className="flex flex-1 flex-col gap-5">
+        <div className="flex min-h-[70vh] flex-col overflow-hidden rounded-lg border border-zinc-200 bg-zinc-950 shadow-sm">
+          <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-white">
             <div>
               <p className="text-sm font-semibold uppercase tracking-normal text-emerald-300">
                 Scan student ID
@@ -231,20 +231,20 @@ export function ScanForm() {
           <div className="relative flex flex-1 items-center justify-center bg-black">
             <video
               ref={videoRef}
-              className="h-full w-full object-cover"
+              className="h-full min-h-[64vh] w-full object-cover"
               muted
               playsInline
             />
-            <div className="pointer-events-none absolute inset-x-[8%] top-1/2 h-20 -translate-y-1/2 rounded-lg border-2 border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.25)] sm:inset-x-[10%] sm:h-28" />
+            <div className="pointer-events-none absolute inset-x-[10%] top-1/2 h-28 -translate-y-1/2 rounded-lg border-2 border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]" />
           </div>
-          <div className="border-t border-white/10 bg-zinc-950 p-3 sm:p-4">
+          <div className="border-t border-white/10 bg-zinc-950 p-4">
             {cameraError ? (
               <div className="mb-3 rounded-md border border-yellow-400/40 bg-yellow-100 px-3 py-2 text-sm text-yellow-950">
                 {cameraError}
               </div>
             ) : null}
             <button
-              className="h-12 w-full rounded-md bg-emerald-600 px-4 text-base font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400 sm:h-14 sm:text-lg"
+              className="h-14 w-full rounded-md bg-emerald-600 px-4 text-lg font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
               type="button"
               disabled={isPending || isDetecting}
               onClick={scanCameraFrame}
