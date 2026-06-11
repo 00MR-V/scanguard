@@ -38,6 +38,7 @@ export function ScanForm() {
   const [result, setResult] = useState<SubmitScanResult | null>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isCameraStarting, setIsCameraStarting] = useState(false);
+  const [isDetecting, setIsDetecting] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -62,18 +63,11 @@ export function ScanForm() {
 
     video
       .play()
-      .then(() => {
-        if (detectorRef.current) {
-          detectFromCamera(detectorRef.current);
-        }
-      })
       .catch(() => {
         setCameraError("Could not start the camera preview.");
         stopCamera();
         setMode("CHOICE");
       });
-    // The detector loop starts only after the camera view mounts.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
 
   function submitBarcode(barcodeValue: string) {
@@ -154,13 +148,22 @@ export function ScanForm() {
     }
   }
 
-  async function detectFromCamera(detector: BarcodeDetectorInstance) {
-    if (!videoRef.current || !streamRef.current || isSubmittingRef.current) {
+  async function scanCameraFrame() {
+    if (
+      !videoRef.current ||
+      !streamRef.current ||
+      !detectorRef.current ||
+      isSubmittingRef.current ||
+      isDetecting
+    ) {
       return;
     }
 
+    setCameraError(null);
+    setIsDetecting(true);
+
     try {
-      const barcodes = await detector.detect(videoRef.current);
+      const barcodes = await detectorRef.current.detect(videoRef.current);
       const barcodeValue = barcodes[0]?.rawValue?.trim();
 
       if (barcodeValue) {
@@ -168,13 +171,13 @@ export function ScanForm() {
         submitBarcode(barcodeValue);
         return;
       }
+
+      setCameraError("No barcode was detected. Try again.");
     } catch {
       setCameraError("Could not read a barcode from the camera.");
+    } finally {
+      setIsDetecting(false);
     }
-
-    animationFrameRef.current = window.requestAnimationFrame(() => {
-      void detectFromCamera(detector);
-    });
   }
 
   function stopCamera() {
@@ -233,6 +236,21 @@ export function ScanForm() {
               playsInline
             />
             <div className="pointer-events-none absolute inset-x-[10%] top-1/2 h-28 -translate-y-1/2 rounded-lg border-2 border-emerald-400 shadow-[0_0_0_9999px_rgba(0,0,0,0.25)]" />
+          </div>
+          <div className="border-t border-white/10 bg-zinc-950 p-4">
+            {cameraError ? (
+              <div className="mb-3 rounded-md border border-yellow-400/40 bg-yellow-100 px-3 py-2 text-sm text-yellow-950">
+                {cameraError}
+              </div>
+            ) : null}
+            <button
+              className="h-14 w-full rounded-md bg-emerald-600 px-4 text-lg font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-zinc-700 disabled:text-zinc-400"
+              type="button"
+              disabled={isPending || isDetecting}
+              onClick={scanCameraFrame}
+            >
+              {isDetecting ? "Scanning..." : "Scan Now"}
+            </button>
           </div>
         </div>
       </section>
