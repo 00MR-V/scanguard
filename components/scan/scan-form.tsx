@@ -42,11 +42,15 @@ export function ScanForm() {
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
+    document.body.classList.toggle("scanner-camera-open", mode === "CAMERA");
+
     if (mode === "MANUAL") {
       inputRef.current?.focus();
     }
 
     return () => {
+      document.body.classList.remove("scanner-camera-open");
+
       if (mode === "CAMERA") {
         stopCamera();
       }

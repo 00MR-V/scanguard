@@ -24,3 +24,7 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+body.scanner-camera-open .scan-page-header {
+  display: none;
+}
