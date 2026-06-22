@@ -8,6 +8,7 @@ import {
   generateUsernameAction,
   type CreateUserState,
 } from "@/actions/user-actions";
+import { CopyLoginMessageButton } from "@/components/admin/users/copy-login-message-button";
 import { formatRole, USER_ROLES } from "@/lib/user-roles";
 
 const INITIAL_STATE: CreateUserState = {
@@ -58,10 +59,16 @@ export function CreateUserForm() {
       ) : null}
 
       {state.status === "SUCCESS" ? (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+        <div className="space-y-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
           <p>{state.message}</p>
-          {shownPassword ? (
-            <p className="mt-2 font-semibold">Password: {shownPassword}</p>
+          {state.createdUsername && shownPassword ? (
+            <div className="space-y-2">
+              <p className="font-semibold">Password: {shownPassword}</p>
+              <CopyLoginMessageButton
+                username={state.createdUsername}
+                password={shownPassword}
+              />
+            </div>
           ) : null}
         </div>
       ) : null}

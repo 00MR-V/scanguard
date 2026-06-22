@@ -8,6 +8,7 @@ import {
   updateUserRoleAction,
   type UserActionState,
 } from "@/actions/user-actions";
+import { CopyLoginMessageButton } from "@/components/admin/users/copy-login-message-button";
 import type { User } from "@/lib/repositories/users";
 import { formatRole, USER_ROLES, type UserRole } from "@/lib/user-roles";
 
@@ -111,9 +112,13 @@ export function UserActionsCell({
       ) : null}
 
       {resetState.generatedPassword ? (
-        <div className="rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-950">
+        <div className="space-y-2 rounded-md border border-yellow-200 bg-yellow-50 px-3 py-2 text-sm text-yellow-950">
           <p className="font-semibold">New password</p>
           <p>{resetState.generatedPassword}</p>
+          <CopyLoginMessageButton
+            username={user.username}
+            password={resetState.generatedPassword}
+          />
         </div>
       ) : null}
     </div>

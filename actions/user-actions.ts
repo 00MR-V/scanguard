@@ -22,6 +22,7 @@ import { createAuditLog } from "@/lib/repositories/audit-logs";
 export type CreateUserState = {
   status: "IDLE" | "SUCCESS" | "ERROR";
   message?: string;
+  createdUsername?: string;
   generatedPassword?: string;
 };
 
@@ -71,6 +72,7 @@ export async function createUserAction(
     return {
       status: "SUCCESS",
       message: `Created user "${username}".`,
+      createdUsername: createdUser.username,
       generatedPassword: password,
     };
   } catch (error) {
