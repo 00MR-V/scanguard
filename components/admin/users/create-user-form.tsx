@@ -8,6 +8,7 @@ import {
   generateUsernameAction,
   type CreateUserState,
 } from "@/actions/user-actions";
+import { formatRole, USER_ROLES } from "@/lib/user-roles";
 
 const INITIAL_STATE: CreateUserState = {
   status: "IDLE",
@@ -106,9 +107,11 @@ export function CreateUserForm() {
           defaultValue="SCANNER"
           required
         >
-          <option value="SCANNER">Scanner</option>
-          <option value="ADMIN">Admin</option>
-          <option value="SUPER_ADMIN">Super admin</option>
+          {USER_ROLES.map((role) => (
+            <option key={role} value={role}>
+              {formatRole(role)}
+            </option>
+          ))}
         </select>
       </label>
 

@@ -6,6 +6,7 @@ export type AuditAction =
   | "USER_CREATED"
   | "USER_DISABLED"
   | "USER_ENABLED"
+  | "USER_ROLE_CHANGED"
   | "PASSWORD_RESET"
   | "LOGIN_SUCCESS"
   | "LOGIN_FAILED"

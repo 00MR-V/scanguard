@@ -2,7 +2,9 @@ import "server-only";
 
 import { neon } from "@neondatabase/serverless";
 
-export type UserRole = "SUPER_ADMIN" | "ADMIN" | "SCANNER";
+import type { UserRole } from "@/lib/user-roles";
+
+export type { UserRole } from "@/lib/user-roles";
 
 export interface CreateUserInput {
   username: string;
@@ -137,6 +139,27 @@ export async function updateUserActiveStatus(
   const rows = (await getSql()`
     UPDATE users
     SET is_active = ${isActive}
+    WHERE id = ${userId}
+    RETURNING
+      id,
+      username,
+      full_name,
+      role,
+      is_active,
+      created_at,
+      last_login_at
+  `) as UserRow[];
+
+  return rows[0] ? mapUser(rows[0]) : null;
+}
+
+export async function updateUserRole(
+  userId: string,
+  role: UserRole,
+): Promise<User | null> {
+  const rows = (await getSql()`
+    UPDATE users
+    SET role = ${role}
     WHERE id = ${userId}
     RETURNING
       id,

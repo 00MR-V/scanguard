@@ -6,10 +6,12 @@ import { requireRole } from "@/lib/auth";
 import {
   createUser,
   findUserById,
+  updateUserRole,
   updateUserActiveStatus,
   updateUserPassword,
   type UserRole,
 } from "@/lib/repositories/users";
+import { formatRole, USER_ROLES } from "@/lib/user-roles";
 import {
   generateEasyPassword,
   generateUsername,
@@ -28,8 +30,6 @@ export type UserActionState = {
   message?: string;
   generatedPassword?: string;
 };
-
-const USER_ROLES: UserRole[] = ["SUPER_ADMIN", "ADMIN", "SCANNER"];
 
 export async function createUserAction(
   _previousState: CreateUserState,
@@ -123,6 +123,58 @@ export async function updateUserActiveStatusAction(
     message: `${updatedUser.username} is now ${
       updatedUser.isActive ? "active" : "inactive"
     }.`,
+  };
+}
+
+export async function updateUserRoleAction(
+  _previousState: UserActionState,
+  formData: FormData,
+): Promise<UserActionState> {
+  const actor = await requireRole(["SUPER_ADMIN"]);
+
+  const userId = getRequiredString(formData, "userId");
+  const role = getUserRole(formData);
+
+  if (!userId || !role) {
+    return {
+      status: "ERROR",
+      message: "User ID and role are required.",
+    };
+  }
+
+  const currentUser = await findUserById(userId);
+
+  if (!currentUser) {
+    return {
+      status: "ERROR",
+      message: "User was not found.",
+    };
+  }
+
+  const updatedUser = await updateUserRole(userId, role);
+
+  if (!updatedUser) {
+    return {
+      status: "ERROR",
+      message: "User was not found.",
+    };
+  }
+
+  revalidatePath("/admin/users");
+  await createAuditLog({
+    userId: actor.id,
+    action: "USER_ROLE_CHANGED",
+    details: {
+      userId: updatedUser.id,
+      username: updatedUser.username,
+      previousRole: currentUser.role,
+      role: updatedUser.role,
+    },
+  });
+
+  return {
+    status: "SUCCESS",
+    message: `${updatedUser.username} is now ${formatRole(updatedUser.role)}.`,
   };
 }
 
