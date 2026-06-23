@@ -1,4 +1,5 @@
 import { loginAction } from "@/actions/auth-actions";
+import { PasswordField } from "@/components/auth/password-field";
 
 type LoginPageProps = {
   searchParams: Promise<{
@@ -43,16 +44,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             />
           </label>
 
-          <label className="block">
-            <span className="text-sm font-medium text-zinc-700">Password</span>
-            <input
-              className="mt-1 h-11 w-full rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              required
-            />
-          </label>
+          <PasswordField />
 
           <button
             className="h-11 w-full rounded-md bg-emerald-700 px-4 text-sm font-semibold text-white transition hover:bg-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-200"
