@@ -235,7 +235,7 @@ export function ScanForm() {
           <div className="relative flex flex-1 items-center justify-center bg-black">
             <video
               ref={videoRef}
-              className="h-full min-h-[34vh] max-h-[45vh] w-full object-cover sm:min-h-[48vh] sm:max-h-none lg:min-h-[56vh]"
+              className="h-full min-h-[34vh] max-h-[56vh] w-full object-cover sm:min-h-[48vh] sm:max-h-none lg:min-h-[56vh]"
               muted
               playsInline
             />
