@@ -216,7 +216,7 @@ export function ScanForm() {
   if (mode === "CAMERA") {
     return (
       <section className="flex flex-1 flex-col gap-5">
-        <div className="flex min-h-[42vh] flex-col overflow-hidden rounded-lg border border-zinc-200 bg-zinc-950 shadow-sm">
+        <div className="flex min-h-[42vh] flex-col overflow-hidden rounded-lg border border-zinc-200 bg-zinc-950 shadow-sm sm:min-h-[56vh] lg:min-h-[64vh]">
           <div className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-white">
             <div>
               <p className="text-sm font-semibold uppercase tracking-normal text-emerald-300">
@@ -235,7 +235,7 @@ export function ScanForm() {
           <div className="relative flex flex-1 items-center justify-center bg-black">
             <video
               ref={videoRef}
-              className="h-full min-h-[38vh] w-full object-cover"
+              className="h-full min-h-[34vh] max-h-[45vh] w-full object-cover sm:min-h-[48vh] sm:max-h-none lg:min-h-[56vh]"
               muted
               playsInline
             />
