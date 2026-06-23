@@ -54,20 +54,74 @@ function AuditLogRow({ log }: { log: AuditLog }) {
       </td>
       <td className="py-3 pr-3 align-top font-medium" data-label="Action">{log.action}</td>
       <td className="py-3 pr-3 align-top" data-label="Details">
-        <pre className="max-w-full whitespace-pre-wrap break-words rounded-md bg-zinc-50 p-3 text-xs text-zinc-700 sm:max-w-xl">
-          {formatDetails(log.details)}
-        </pre>
+        <AuditDetails details={log.details} />
       </td>
     </tr>
   );
 }
 
-function formatDetails(details: Record<string, unknown> | null): string {
-  if (!details) {
-    return "{}";
+function AuditDetails({
+  details,
+}: {
+  details: Record<string, unknown> | null;
+}) {
+  const entries = Object.entries(details ?? {}).filter(
+    ([, value]) => value !== undefined,
+  );
+
+  if (entries.length === 0) {
+    return <span className="text-sm text-zinc-500">No details</span>;
   }
 
-  return JSON.stringify(details, null, 2);
+  return (
+    <dl className="grid max-w-full gap-2 rounded-md bg-zinc-50 p-3 text-sm sm:max-w-xl sm:grid-cols-[9rem_1fr]">
+      {entries.map(([key, value]) => (
+        <div className="contents" key={key}>
+          <dt className="text-xs font-semibold uppercase text-zinc-500">
+            {formatDetailLabel(key)}
+          </dt>
+          <dd className="min-w-0 break-words text-zinc-800">
+            {formatDetailValue(key, value)}
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function formatDetailLabel(key: string): string {
+  return key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatDetailValue(key: string, value: unknown): string {
+  if (value === null || value === "") {
+    return "-";
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "Yes" : "No";
+  }
+
+  if (typeof value === "string") {
+    if (["reason", "role", "previousRole", "status"].includes(key)) {
+      return value
+        .replace(/_/g, " ")
+        .toLowerCase()
+        .replace(/\b\w/g, (letter) => letter.toUpperCase());
+    }
+
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "bigint") {
+    return String(value);
+  }
+
+  return JSON.stringify(value);
 }
 
 function formatDateTime(value: Date): string {
