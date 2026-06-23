@@ -24,18 +24,18 @@ export default async function AdminLayout({
     <div className="min-h-screen bg-zinc-100 text-zinc-950">
       <header className="border-b border-zinc-200 bg-white">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
+          <div className="min-w-0">
             <p className="text-lg font-semibold">ScanGuard</p>
-            <p className="text-sm text-zinc-500">
+            <p className="break-words text-sm text-zinc-500">
               {user.fullName || user.username} · {formatRole(user.role)}
             </p>
           </div>
 
           <div className="flex flex-col gap-3 lg:items-end">
-            <nav className="flex flex-wrap gap-2">
+            <nav className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               {links.map((link) => (
                 <Link
-                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
+                  className="inline-flex min-h-10 items-center justify-center rounded-md border border-zinc-300 px-3 py-2 text-center text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
                   href={link.href}
                   key={link.href}
                 >
@@ -43,15 +43,15 @@ export default async function AdminLayout({
                 </Link>
               ))}
             </nav>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
               <a
-                className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
+                className="inline-flex min-h-10 items-center justify-center rounded-md border border-zinc-300 px-3 py-2 text-center text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
                 href="/api/admin/export/scans"
               >
                 Export Scans CSV
               </a>
               <a
-                className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
+                className="inline-flex min-h-10 items-center justify-center rounded-md border border-zinc-300 px-3 py-2 text-center text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
                 href="/api/admin/export/duplicates"
               >
                 Export Duplicates CSV

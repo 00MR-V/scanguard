@@ -93,8 +93,8 @@ function RecentActivityTable({
       {activities.length === 0 ? (
         <p className="mt-4 text-sm text-zinc-500">No scans yet.</p>
       ) : (
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[620px] text-left text-sm">
+        <div className="responsive-table-wrap mt-4 overflow-x-auto">
+          <table className="responsive-table w-full min-w-[620px] text-left text-sm">
             <thead className="border-b border-zinc-200 text-xs uppercase text-zinc-500">
               <tr>
                 <th className="py-2 pr-3">Barcode</th>
@@ -106,14 +106,14 @@ function RecentActivityTable({
             <tbody className="divide-y divide-zinc-100">
               {activities.map((activity) => (
                 <tr key={activity.id}>
-                  <td className="py-3 pr-3 font-medium">
+                  <td className="py-3 pr-3 font-medium" data-label="Barcode">
                     {activity.barcodeValue}
                   </td>
-                  <td className="py-3 pr-3">{formatUser(activity)}</td>
-                  <td className="py-3 pr-3">
+                  <td className="py-3 pr-3" data-label="Scanner">{formatUser(activity)}</td>
+                  <td className="py-3 pr-3" data-label="Time">
                     {formatDateTime(activity.scannedAt)}
                   </td>
-                  <td className="py-3 pr-3">{activity.deviceId ?? "-"}</td>
+                  <td className="py-3 pr-3" data-label="Device">{activity.deviceId ?? "-"}</td>
                 </tr>
               ))}
             </tbody>
@@ -131,8 +131,8 @@ function TopScannersTable({ scanners }: { scanners: TopScanner[] }) {
       {scanners.length === 0 ? (
         <p className="mt-4 text-sm text-zinc-500">No scanner activity yet.</p>
       ) : (
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[420px] text-left text-sm">
+        <div className="responsive-table-wrap mt-4 overflow-x-auto">
+          <table className="responsive-table w-full min-w-[420px] text-left text-sm">
             <thead className="border-b border-zinc-200 text-xs uppercase text-zinc-500">
               <tr>
                 <th className="py-2 pr-3">Scanner</th>
@@ -143,11 +143,11 @@ function TopScannersTable({ scanners }: { scanners: TopScanner[] }) {
             <tbody className="divide-y divide-zinc-100">
               {scanners.map((scanner) => (
                 <tr key={scanner.userId}>
-                  <td className="py-3 pr-3 font-medium">
+                  <td className="py-3 pr-3 font-medium" data-label="Scanner">
                     {scanner.fullName || scanner.username}
                   </td>
-                  <td className="py-3 pr-3">{scanner.scanCount}</td>
-                  <td className="py-3 pr-3">
+                  <td className="py-3 pr-3" data-label="Scans">{scanner.scanCount}</td>
+                  <td className="py-3 pr-3" data-label="Last scan">
                     {formatDateTime(scanner.lastScanAt)}
                   </td>
                 </tr>
@@ -171,8 +171,8 @@ function RecentDuplicatesTable({
       {duplicates.length === 0 ? (
         <p className="mt-4 text-sm text-zinc-500">No duplicate attempts yet.</p>
       ) : (
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[620px] text-left text-sm">
+        <div className="responsive-table-wrap mt-4 overflow-x-auto">
+          <table className="responsive-table w-full min-w-[620px] text-left text-sm">
             <thead className="border-b border-zinc-200 text-xs uppercase text-zinc-500">
               <tr>
                 <th className="py-2 pr-3">Barcode</th>
@@ -184,17 +184,17 @@ function RecentDuplicatesTable({
             <tbody className="divide-y divide-zinc-100">
               {duplicates.map((duplicate) => (
                 <tr key={duplicate.id}>
-                  <td className="py-3 pr-3 font-medium">
+                  <td className="py-3 pr-3 font-medium" data-label="Barcode">
                     {duplicate.barcodeValue}
                   </td>
-                  <td className="py-3 pr-3">
+                  <td className="py-3 pr-3" data-label="Attempted by">
                     {duplicate.attemptedByFullName ||
                       duplicate.attemptedByUsername}
                   </td>
-                  <td className="py-3 pr-3">
+                  <td className="py-3 pr-3" data-label="Time">
                     {formatDateTime(duplicate.attemptedAt)}
                   </td>
-                  <td className="py-3 pr-3">{duplicate.location ?? "-"}</td>
+                  <td className="py-3 pr-3" data-label="Location">{duplicate.location ?? "-"}</td>
                 </tr>
               ))}
             </tbody>

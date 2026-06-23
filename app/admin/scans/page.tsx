@@ -34,8 +34,8 @@ export default async function AdminScansPage({ searchParams }: HistoryPageProps)
           {scans.length === 0 ? (
             <p className="text-sm text-zinc-500">No scans found.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left text-sm">
+            <div className="responsive-table-wrap overflow-x-auto">
+              <table className="responsive-table w-full min-w-[760px] text-left text-sm">
                 <thead className="border-b border-zinc-200 text-xs uppercase text-zinc-500">
                   <tr>
                     <th className="py-2 pr-3">Barcode</th>
@@ -121,13 +121,13 @@ function FilterInput({
 function ScanRow({ scan }: { scan: SearchScanResult }) {
   return (
     <tr>
-      <td className="py-3 pr-3 font-medium">{scan.barcodeValue}</td>
-      <td className="py-3 pr-3">
+      <td className="py-3 pr-3 font-medium" data-label="Barcode">{scan.barcodeValue}</td>
+      <td className="py-3 pr-3" data-label="Scanned by">
         {scan.scannedByFullName || scan.scannedByUsername}
       </td>
-      <td className="py-3 pr-3">{formatDateTime(scan.scannedAt)}</td>
-      <td className="py-3 pr-3">{scan.deviceId ?? "-"}</td>
-      <td className="py-3 pr-3">{scan.location ?? "-"}</td>
+      <td className="py-3 pr-3" data-label="Scanned at">{formatDateTime(scan.scannedAt)}</td>
+      <td className="py-3 pr-3" data-label="Device ID">{scan.deviceId ?? "-"}</td>
+      <td className="py-3 pr-3" data-label="Location">{scan.location ?? "-"}</td>
     </tr>
   );
 }

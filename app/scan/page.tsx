@@ -28,17 +28,17 @@ export default async function ScanPage() {
               <p className="text-lg font-semibold">{displayName}</p>
             </div>
           </div>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
             {user.role === "SUPER_ADMIN" || user.role === "ADMIN" ? (
               <>
                 <Link
-                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
+                  className="inline-flex min-h-10 items-center justify-center rounded-md border border-zinc-300 px-3 py-2 text-center text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
                   href="/admin/dashboard"
                 >
                   Dashboard
                 </Link>
                 <Link
-                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
+                  className="inline-flex min-h-10 items-center justify-center rounded-md border border-zinc-300 px-3 py-2 text-center text-sm font-medium text-zinc-800 transition hover:bg-zinc-100"
                   href="/admin/users"
                 >
                   Users

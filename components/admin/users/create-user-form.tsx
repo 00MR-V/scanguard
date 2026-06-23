@@ -86,7 +86,7 @@ export function CreateUserForm() {
 
       <label className="block">
         <span className="text-sm font-medium text-zinc-700">Username</span>
-        <div className="mt-1 flex gap-2">
+        <div className="mt-1 grid gap-2 sm:flex">
           <input
             ref={usernameRef}
             className="h-11 min-w-0 flex-1 rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
@@ -96,7 +96,7 @@ export function CreateUserForm() {
             required
           />
           <button
-            className="h-11 rounded-md border border-zinc-300 px-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100 disabled:opacity-50"
+            className="h-11 rounded-md border border-zinc-300 px-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100 disabled:opacity-50 sm:whitespace-nowrap"
             type="button"
             disabled={isPending || isGenerating}
             onClick={generateUsername}
@@ -124,7 +124,7 @@ export function CreateUserForm() {
 
       <label className="block">
         <span className="text-sm font-medium text-zinc-700">Password</span>
-        <div className="mt-1 flex gap-2">
+        <div className="mt-1 grid gap-2 sm:flex">
           <input
             ref={passwordRef}
             className="h-11 min-w-0 flex-1 rounded-md border border-zinc-300 px-3 text-base outline-none transition focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"
@@ -134,7 +134,7 @@ export function CreateUserForm() {
             required
           />
           <button
-            className="h-11 rounded-md border border-zinc-300 px-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100 disabled:opacity-50"
+            className="h-11 rounded-md border border-zinc-300 px-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-100 disabled:opacity-50 sm:whitespace-nowrap"
             type="button"
             disabled={isPending || isGenerating}
             onClick={generatePassword}

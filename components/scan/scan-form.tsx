@@ -274,7 +274,7 @@ export function ScanForm() {
             </span>
             <input
               ref={inputRef}
-              className="mt-2 h-16 w-full rounded-md border-2 border-zinc-300 px-4 text-3xl font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100"
+              className="mt-2 h-14 w-full rounded-md border-2 border-zinc-300 px-4 text-2xl font-semibold outline-none transition focus:border-emerald-700 focus:ring-4 focus:ring-emerald-100 sm:h-16 sm:text-3xl"
               name="barcodeValue"
               type="text"
               autoComplete="off"
@@ -340,7 +340,7 @@ export function ScanForm() {
           disabled={isPending || isCameraStarting}
           onClick={openCamera}
         >
-          <p className="text-3xl font-black">Scan Student ID</p>
+          <p className="text-2xl font-black sm:text-3xl">Scan Student ID</p>
           <p className="mt-3 text-sm text-emerald-50">
             {isCameraStarting ? "Starting camera..." : "Open camera scanner"}
           </p>
@@ -351,7 +351,7 @@ export function ScanForm() {
           type="button"
           onClick={startManualEntry}
         >
-          <p className="text-3xl font-black">Manual Entry</p>
+          <p className="text-2xl font-black sm:text-3xl">Manual Entry</p>
           <p className="mt-3 text-sm text-zinc-500">Type the ID number</p>
         </button>
 
@@ -370,8 +370,10 @@ function ScanResult({ result }: { result: SubmitScanResult }) {
     return (
       <section className="rounded-lg border border-emerald-300 bg-emerald-100 p-6 text-emerald-950 shadow-sm">
         <div className="w-full">
-          <p className="text-5xl font-black">VERIFICATION SUCCESSFUL</p>
-          <dl className="mt-6 space-y-4 text-xl">
+          <p className="break-words text-4xl font-black sm:text-5xl">
+            VERIFICATION SUCCESSFUL
+          </p>
+          <dl className="mt-6 space-y-4 text-lg sm:text-xl">
             <ResultRow label="Student ID" value={result.barcodeValue} />
             <ResultRow label="Time" value={formatDateTime(result.scannedAt)} />
           </dl>
@@ -384,8 +386,10 @@ function ScanResult({ result }: { result: SubmitScanResult }) {
     return (
       <section className="rounded-lg border border-red-300 bg-red-100 p-6 text-red-950 shadow-sm">
         <div className="w-full">
-          <p className="text-5xl font-black">DUPLICATE</p>
-          <dl className="mt-6 space-y-4 text-xl">
+          <p className="break-words text-4xl font-black sm:text-5xl">
+            DUPLICATE
+          </p>
+          <dl className="mt-6 space-y-4 text-lg sm:text-xl">
             <ResultRow label="Student ID" value={result.barcodeValue} />
             <ResultRow label="First scanned by" value={result.originalScannedBy} />
             <ResultRow
@@ -412,8 +416,8 @@ function ScanResult({ result }: { result: SubmitScanResult }) {
   return (
     <section className="rounded-lg border border-yellow-300 bg-yellow-100 p-6 text-yellow-950 shadow-sm">
       <div>
-        <p className="text-5xl font-black">{title}</p>
-        <p className="mt-4 text-xl">{result.message}</p>
+        <p className="break-words text-4xl font-black sm:text-5xl">{title}</p>
+        <p className="mt-4 text-lg sm:text-xl">{result.message}</p>
       </div>
     </section>
   );

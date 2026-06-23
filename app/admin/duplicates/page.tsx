@@ -38,8 +38,8 @@ export default async function AdminDuplicatesPage({
           {duplicates.length === 0 ? (
             <p className="text-sm text-zinc-500">No duplicate attempts found.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[980px] text-left text-sm">
+            <div className="responsive-table-wrap overflow-x-auto">
+              <table className="responsive-table w-full min-w-[980px] text-left text-sm">
                 <thead className="border-b border-zinc-200 text-xs uppercase text-zinc-500">
                   <tr>
                     <th className="py-2 pr-3">Barcode</th>
@@ -131,21 +131,21 @@ function DuplicateRow({
 }) {
   return (
     <tr>
-      <td className="py-3 pr-3 font-medium">{duplicate.barcodeValue}</td>
-      <td className="py-3 pr-3">
+      <td className="py-3 pr-3 font-medium" data-label="Barcode">{duplicate.barcodeValue}</td>
+      <td className="py-3 pr-3" data-label="Original scanned by">
         {duplicate.originalScannedByFullName ||
           duplicate.originalScannedByUsername ||
           "-"}
       </td>
-      <td className="py-3 pr-3">
+      <td className="py-3 pr-3" data-label="Original scanned at">
         {formatOptionalDateTime(duplicate.originalScannedAt)}
       </td>
-      <td className="py-3 pr-3">
+      <td className="py-3 pr-3" data-label="Duplicate attempted by">
         {duplicate.attemptedByFullName || duplicate.attemptedByUsername}
       </td>
-      <td className="py-3 pr-3">{formatDateTime(duplicate.attemptedAt)}</td>
-      <td className="py-3 pr-3">{duplicate.deviceId ?? "-"}</td>
-      <td className="py-3 pr-3">{duplicate.location ?? "-"}</td>
+      <td className="py-3 pr-3" data-label="Duplicate attempted at">{formatDateTime(duplicate.attemptedAt)}</td>
+      <td className="py-3 pr-3" data-label="Device ID">{duplicate.deviceId ?? "-"}</td>
+      <td className="py-3 pr-3" data-label="Location">{duplicate.location ?? "-"}</td>
     </tr>
   );
 }

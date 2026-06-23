@@ -21,8 +21,8 @@ export default async function AuditLogsPage() {
           {logs.length === 0 ? (
             <p className="text-sm text-zinc-500">No audit logs found.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-left text-sm">
+            <div className="responsive-table-wrap overflow-x-auto">
+              <table className="responsive-table w-full min-w-[900px] text-left text-sm">
                 <thead className="border-b border-zinc-200 text-xs uppercase text-zinc-500">
                   <tr>
                     <th className="py-2 pr-3">Time</th>
@@ -48,13 +48,13 @@ export default async function AuditLogsPage() {
 function AuditLogRow({ log }: { log: AuditLog }) {
   return (
     <tr>
-      <td className="py-3 pr-3 align-top">{formatDateTime(log.createdAt)}</td>
-      <td className="py-3 pr-3 align-top">
+      <td className="py-3 pr-3 align-top" data-label="Time">{formatDateTime(log.createdAt)}</td>
+      <td className="py-3 pr-3 align-top" data-label="User">
         {log.fullName || log.username || "-"}
       </td>
-      <td className="py-3 pr-3 align-top font-medium">{log.action}</td>
-      <td className="py-3 pr-3 align-top">
-        <pre className="max-w-xl whitespace-pre-wrap break-words rounded-md bg-zinc-50 p-3 text-xs text-zinc-700">
+      <td className="py-3 pr-3 align-top font-medium" data-label="Action">{log.action}</td>
+      <td className="py-3 pr-3 align-top" data-label="Details">
+        <pre className="max-w-full whitespace-pre-wrap break-words rounded-md bg-zinc-50 p-3 text-xs text-zinc-700 sm:max-w-xl">
           {formatDetails(log.details)}
         </pre>
       </td>
